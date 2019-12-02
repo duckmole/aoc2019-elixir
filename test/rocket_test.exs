@@ -24,5 +24,13 @@ defmodule RocketTest do
       assert "2,4,4,5,99,9801" == Rocket.intcode("2,4,4,5,99,0")
       assert "30,1,1,4,2,5,6,0,99" == Rocket.intcode("1,1,1,4,99,5,6,0,99")
     end
+
+    test "alarm_1202" do
+      assert 2782414 == Rocket.alarm_1202
+    end
+
+    test "noun verb" do
+      assert 1202 == Rocket.noun_verb(2782414)
+    end
   end
 end

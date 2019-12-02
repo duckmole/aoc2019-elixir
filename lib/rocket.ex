@@ -31,9 +31,35 @@ defmodule Rocket do
   end
 
   def intcode(code, :alarm_1202) do
+    intcode_with_noun_vern(code, 12, 2)
+  end
+
+  def intcode_with_noun_vern(expected, code) do
+    intcode_with_noun_vern(expected, intcode_with_noun_vern(code, 0, 0), code, 0, 0)
+  end
+
+  def intcode_with_noun_vern(expected, expected, _, noun, verb) do
+    100*noun + verb
+  end
+  def intcode_with_noun_vern(expected, _, code, 100, verb) do
+    intcode_with_noun_vern(expected,
+      intcode_with_noun_vern(code, 0, verb+1),
+      code,
+      0,
+      verb+1)
+  end
+  def intcode_with_noun_vern(expected, _, code, noun, verb) do
+    intcode_with_noun_vern(expected,
+      intcode_with_noun_vern(code, noun+1, verb),
+      code,
+      noun+1,
+      verb)
+  end
+
+  def intcode_with_noun_vern(code, noun, verb) do
     [operation, _, _ | tail] = Enum.map(String.split(code, ","), fn(l) -> integer(l) end)
-    decode = [operation, 12, 2] ++ tail
-    Enum.join(intcode(operation, 0, decode), ",")
+    decode = [operation, noun, verb] ++ tail
+    List.first(intcode(operation, 0, decode))
   end
 
   def intcode(code) do
@@ -72,7 +98,14 @@ defmodule Rocket do
   def alarm_1202 do
     File.stream!("day2.txt")
     |> Stream.map(&String.strip/1)
-    |> Stream.map(fn (line) -> IO.puts intcode(line, :alarm_1202) end)
-    |> Stream.run
+    |> Stream.map(fn (line) -> intcode_with_noun_vern(line, 12, 2) end)
+    |> Enum.sum
+  end
+
+  def noun_verb(expected) do
+    File.stream!("day2.txt")
+    |> Stream.map(&String.strip/1)
+    |> Stream.map(fn (line) -> intcode_with_noun_vern(expected, line) end)
+    |> Enum.sum
   end
 end
