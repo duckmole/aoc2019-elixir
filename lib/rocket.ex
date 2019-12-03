@@ -72,7 +72,6 @@ defmodule Rocket do
   end
 
   def intcode(operator, index, result) do
-
     first = Enum.at(result, index + 1)
     second = Enum.at(result, index + 2)
     dest = Enum.at(result, index + 3)
@@ -107,5 +106,75 @@ defmodule Rocket do
     |> Stream.map(&String.strip/1)
     |> Stream.map(fn (line) -> intcode_with_noun_vern(expected, line) end)
     |> Enum.sum
+  end
+
+  def offset("R") do
+    [1, 0]
+  end
+  def offset("L") do
+    [-1, 0]
+  end
+  def offset("U") do
+    [0, 1]
+  end
+  def offset("D") do
+    [0, -1]
+  end
+
+  def line([x,y], <<direction :: binary-size(1)>> <> length ) do
+    [offset_x, offset_y] = offset(direction)
+    Enum.map((1..integer(length)), fn(i) ->
+      [x+i*offset_x, y+i*offset_y]
+    end)
+  end
+
+  def points(limits) do
+    points([[0,0]], limits)
+  end
+
+  def points(all_points, []) do
+    all_points
+  end
+
+  def points(current_points, [direction | tail]) do
+    points(current_points ++ line(List.last(current_points), direction), tail)
+  end
+
+  def string_to_points(string) do
+    [string1, string2] = String.split(string, "\n")
+    [points(String.split(string1, ",")), points(String.split(string2, ","))]
+  end
+
+  def intersections(points1, points2) do
+    points3 = points1 -- points2
+    [ _ | intersect ] = points1 -- points3
+    intersect
+  end
+
+  def closest_wire(string) do
+    [points1, points2] = string_to_points(string)
+    Enum.min(Enum.map(intersections(points1, points2), fn([x,y]) -> abs(x) + abs(y) end))
+  end
+
+  def update_number(false, _, _, steps) do
+    steps
+  end
+  def update_number(true, point, length, steps) do
+    Map.put(steps, point, length + steps[point])
+  end
+  def step([], _, _, step_numbers) do
+    step_numbers
+  end
+  def step([point | tail] , intersect, length, steps) do
+    new_steps = update_number(Enum.member?(intersect, point), point, length, steps)
+    step(tail, intersect, length + 1, new_steps)
+  end
+
+  def lower_step(string) do
+    [points1, points2] = string_to_points(string)
+    intersect = intersections(points1, points2)
+    steps = Map.new(Enum.map(intersect, fn(x) -> {x, 0} end))
+    step_numbers = step(points1, intersect, 0, steps)
+    Enum.min(Map.values(step(points2, intersect, 0, step_numbers)))
   end
 end
