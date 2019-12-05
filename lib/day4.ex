@@ -6,7 +6,8 @@ defmodule Secure do
   end
 
   def number(string) do
-    Enum.map(String.graphemes(string), fn(x) -> integer(x) end)
+    [0] ++ Enum.map(String.graphemes(string), fn(x) -> integer(x) end) ++
+    [10]
   end
 
   def increment(true), do: 1
@@ -16,16 +17,26 @@ defmodule Secure do
     do_valid(number(string))
   end
 
-  def adjacent([a,b,c,d,e,f]) do
-    (a == b) && (b != c) ||
-    (b == c) && (c != d) && (b != a)||
-    (c == d) && (d != e) && (c != b) ||
-    (d == e) && (e != f) && (d != c) ||
-    (e == f) && (e != d)
+  def adjacent(numbers) do
+    adjacent(numbers, false)
   end
 
-  def increase([a,b,c,d,e,f]) do
-    (a<=b) && (b<=c) && (c<=d) && (d<=e) && (e<=f)
+  def adjacent([_,_,_], acc) do
+    acc
+  end
+  def adjacent([a,b,c,d|tail], acc) do
+    adjacent( [b,c,d | tail], (a != b) && (b == c) && (c != d) || acc)
+  end
+
+  def increase(numbers) do
+    increase(numbers, true)
+  end
+
+  def increase([_], acc) do
+    acc
+  end
+  def increase([a,b| tail], acc) do
+    increase([b|tail],(a<=b) && acc)
   end
 
   def do_valid(number) do
