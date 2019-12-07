@@ -19,19 +19,35 @@ defmodule RocketTest do
     end
 
     test "intcode with a one operation" do
-      assert "2,0,0,0,99" == Rocket.intcode("1,0,0,0,99")
-      assert "2,3,0,6,99" = Rocket.intcode("2,3,0,3,99")
-      assert "2,4,4,5,99,9801" == Rocket.intcode("2,4,4,5,99,0")
-      assert "30,1,1,4,2,5,6,0,99" == Rocket.intcode("1,1,1,4,99,5,6,0,99")
+      assert {[0], "2,0,0,0,99"} ==  Rocket.intcode("1,0,0,0,99")
+      assert {[0], "2,0,0,0,99"} == Rocket.intcode("1,0,0,0,99")
+      assert {[0], "2,3,0,6,99"} = Rocket.intcode("2,3,0,3,99")
+      assert {[0], "2,4,4,5,99,9801"} == Rocket.intcode("2,4,4,5,99,0")
+      assert {[0], "30,1,1,4,2,5,6,0,99"} == Rocket.intcode("1,1,1,4,99,5,6,0,99")
     end
 
     test "intcode with mode" do
-      assert "1002,4,3,4,99" == Rocket.intcode("1002,4,3,4,33")
-      assert "1101,100,-1,4,99" == Rocket.intcode("1101,100,-1,4,0")
+      assert {[0], "1002,4,3,4,99"} == Rocket.intcode("1002,4,3,4,33")
+      assert {[0], "1101,100,-1,4,99"} == Rocket.intcode("1101,100,-1,4,0")
     end
 
-    test "more mode" do,
-
+    test "more mode" do
+      {[1 | _], _} = Rocket.intcode(8,"3,9,8,9,10,9,4,9,99,-1,8")
+      {[0 | _], _} = Rocket.intcode(9,"3,9,8,9,10,9,4,9,99,-1,8")
+      {[0 | _], _} = Rocket.intcode(7,"3,9,8,9,10,9,4,9,99,-1,8")
+      {[1 | _], _} = Rocket.intcode(7,"3,9,7,9,10,9,4,9,99,-1,8")
+      {[0 | _], _} = Rocket.intcode(8,"3,9,7,9,10,9,4,9,99,-1,8")
+      {[0 | _], _} = Rocket.intcode(9,"3,9,7,9,10,9,4,9,99,-1,8")
+      {[1 | _], _} = Rocket.intcode(8,"3,3,1108,-1,8,3,4,3,99")
+      {[0 | _], _} = Rocket.intcode(7,"3,3,1108,-1,8,3,4,3,99")
+      {[0 | _], _} = Rocket.intcode(9,"3,3,1108,-1,8,3,4,3,99")
+      {[1 | _], _} = Rocket.intcode(7,"3,3,1107,-1,8,3,4,3,99")
+      {[0 | _], _} = Rocket.intcode(8,"3,3,1107,-1,8,3,4,3,99")
+      {[0 | _], _} = Rocket.intcode(9,"3,3,1107,-1,8,3,4,3,99")
+      {[0 | _], _} = Rocket.intcode(0,"3,12,6,12,15,1,13,14,13,4,13,99,-1,0,1,9")
+      {[1 | _], _} = Rocket.intcode(1000,"3,12,6,12,15,1,13,14,13,4,13,99,-1,0,1,9")
+      {[0 | _], _} = Rocket.intcode(0,"3,3,1105,-1,9,1101,0,0,12,4,12,99,1")
+      {[1 | _], _} = Rocket.intcode(1000,"3,3,1105,-1,9,1101,0,0,12,4,12,99,1")
     end
 
     test "alarm_1202" do

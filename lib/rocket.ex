@@ -60,20 +60,18 @@ defmodule Rocket do
   def intcode_with_noun_vern(code, noun, verb) do
     [operation, _, _ | tail] = Enum.map(String.split(code, ","), fn(l) -> integer(l) end)
     decode = [operation, noun, verb] ++ tail
-    List.first(intcode(operation, 0, decode, 0))
+    {_, result} = intcode(operation, 0, decode, 0)
+    List.first(result)
   end
 
   def intcode(code) do
-    intcode(0, code)
+    intcode([0], code)
   end
 
-  def intcode(input, code) do
+  def intcode(input_output, code) do
     decode = Enum.map(String.split(code, ","), fn(l) -> integer(l) end)
-    Enum.join(intcode(List.first(decode), 0, decode, input), ",")
-  end
-
-  def intcode(99, _, result, intput) do
-    result
+    {input_output, result} = intcode(List.first(decode), 0, decode, input_output)
+    {input_output, Enum.join(result,",")}
   end
 
   def decompose(operator, index, result) do
@@ -93,34 +91,38 @@ defmodule Rocket do
   def jump(6, 0, second, index), do: second
   def jump(6, _, second, index), do: index + 3
 
-  def jump(index, result, input) do
-    intcode(Enum.at(result, index), index, result, input)
+  def jump(index, result, input_output) do
+    intcode(Enum.at(result, index), index, result, input_output)
   end
 
-  def intcode(operator, index, result, input) when rem(operator,100) == 3 do
+  def intcode(99, _, result, input_output) do
+    {input_output, result}
+  end
+  def intcode(operator, index, result, input_output) when rem(operator,100) == 3 do
     dest = value(1, index+1, result)
-    value = input
+    value = input_output
     new_result = compute_result(value, dest, result)
     intcode(Enum.at(new_result, index + 2), index + 2,
-      new_result, input)
+      new_result, input_output)
   end
-  def intcode(operator, index, result, input) when rem(operator,100) == 4 do
+  def intcode(operator, index, result, input_output) when rem(operator,100) == 4 do
     value = value(0, index+1, result)
     IO.puts(value)
+
     intcode(Enum.at(result, index + 2), index + 2,
-      result, input)
+      result, [value] ++ input_output)
   end
 
-  def intcode(operator, index, result, input) when rem(operator,100) == 5 or rem(operator,100) == 6 do
+  def intcode(operator, index, result, input_output) when rem(operator,100) == 5 or rem(operator,100) == 6 do
     [opcode, first, second, dest] = decompose(operator, index, result)
     jump(jump(opcode, first, second, index), result, index)
   end
 
-  def intcode(operator, index, result, input) do
+  def intcode(operator, index, result, input_output) do
     [opcode, first, second, dest] = decompose(operator, index, result)
     value = operation(opcode, first, second)
     new_result = compute_result(value, dest, result)
-    intcode(Enum.at(new_result, index + 4), index + 4, new_result, input)
+    intcode(Enum.at(new_result, index + 4), index + 4, new_result, input_output)
   end
 
   def compute_result(value, dest, result) do
