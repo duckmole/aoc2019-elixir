@@ -60,9 +60,9 @@ defmodule Day9 do
     end
   end
 
-  def value(0, _, value, result), do: Enum.at(result, Enum.at(result, value))
-  def value(1, _, index, result), do:  Enum.at(result, index)
-  def value(2, indexes, value, result), do: Enum.at(result, value) + indexes[:relative_base]
+  def value(0, indexes, value, result), do: Enum.at(result, Enum.at(result, value))
+  def value(1, indexes, value, result), do: Enum.at(result, value)
+  def value(2, indexes, value, result), do: Enum.at(result, Enum.at(result, value) + indexes[:relative_base])
 
   def compute_result(value, dest, result) do
     Enum.concat(Enum.concat(Enum.take(result, dest), [value]),
@@ -88,12 +88,9 @@ defmodule Day9 do
     a = div(operator, 100000)
     index = indexes[:index]
 
-    IO.puts("#{opcode} - #{c} - #{b} - #{a} - #{index}")
-    IO.puts("first #{c} - #{index+1}")
-    first = value(c, indexes, index + 1, result)
-    second = value(b, indexes, index + 2, result)
-    dest = value(rem((a+1), 2), indexes, index + 3, result)
-    IO.puts("values : #{first} - #{second} - #{dest}")
+    first = value(c, indexes, index + 1, result) || 0
+    second = value(b, indexes, index + 2, result) || 0
+    dest = value(rem((a+1), 2), indexes, index + 3, result) || 0
     [opcode, first, second, dest]
   end
 
@@ -113,38 +110,43 @@ defmodule Day9 do
       %{child: child_pid, thrusters: thrusters_pid}, 0)
   end
 
-  def intcode(99, _, result, pids, last_output) do
+  def intcode(99, indexes, result, pids, last_output) do
+    log(99, indexes, result)
     case pids[:thrusters] do
       nil -> :ok
       pid -> send pid, {:value, last_output}
     end
+    IO.puts("ended")
     Enum.join(result, ",")
   end
   def intcode(operator, indexes, result, pids, last_output) when rem(operator,100) == 3 do
+    log(operator, indexes, result)
     dest = value(1, indexes, indexes[:index]+1, result)
     IO.puts("waiting")
     receive do
-      {:input, input} ->
+      {:output, input} ->
         new_result = compute_result(input, dest, result)
         intcode(Enum.at(new_result, indexes[:index] + 2), %{indexes | index: indexes[:index] + 2},
         new_result, pids, last_output)
     end
   end
   def intcode(operator, indexes, result, pids, _) when rem(operator,100) == 4 do
-    value = value(1, indexes, indexes[:index]+1, result)
-    index = indexes[:index]
-    send pids[:child], {:input, value +  indexes[:relative_base]}
+    log(operator, indexes, result)
+    [opcode, first, second, dest] = decompose(operator, indexes, result)
+    send pids[:child], {:output, first}
     intcode(Enum.at(result, indexes[:index] + 2),  %{indexes | index: indexes[:index] + 2},
-      result, pids, value)
+      result, pids, first)
   end
 
   def intcode(operator, indexes, result, pids, last_output) when rem(operator,100) == 5 or rem(operator,100) == 6 do
+    log(operator, indexes, result)
     [opcode, first, second, _] = decompose(operator, indexes, result)
-    new_indexes = %{indexes | index: jump(opcode, first, second, indexes[:inputs])}
+    new_indexes = %{indexes | index: jump(opcode, first, second, indexes[:index])}
     intcode(Enum.at(result, new_indexes[:index]), new_indexes, result, pids, last_output)
   end
 
   def intcode(operator, indexes, result, pids, last_output) when rem(operator,100) == 9 do
+    log(operator, indexes, result)
     [opcode, first, _, _] = decompose(operator, indexes, result)
     new_indexes = %{relative_base: indexes[:relative_base] + first,
                    index: indexes[:index] + 2}
@@ -152,12 +154,36 @@ defmodule Day9 do
   end
 
   def intcode(operator, indexes, result, pids, last_output) do
-    IO.puts("index #{indexes[:index]}")
+    log(operator, indexes, result)
     [opcode, first, second, dest] = decompose(operator, indexes, result)
     value = operation(opcode, first, second)
     new_result = compute_result(value, dest, result)
     intcode(Enum.at(new_result, indexes[:index] + 4), %{indexes | index: indexes[:index] + 4},
       new_result, pids, last_output)
+  end
+
+  def log(operator, indexes, result) do
+    string = Enum.join(result,",")
+    IO.puts("op #{operator} i - #{indexes[:index]} ------ #{string}")
+  end
+
+  def display(prev \\ nil) do
+    receive do
+      {:output2, 0} ->
+        case prev do
+          0 -> IO.puts("STOP DISPLAY")
+          _ ->
+            IO.puts("DS - 0")
+            display(0)
+        end
+      {:output, value} ->
+        IO.puts("D - #{value}")
+        display(value)
+      {:value, value} ->
+        IO.puts("Intcode ended : #{value}")
+    after 100000 ->
+        IO.puts("stop display")
+    end
   end
 
   def permutations([]), do: [[]]
