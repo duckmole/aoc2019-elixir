@@ -38,7 +38,7 @@ defmodule Day9 do
     opcode = rem(operator, 100)
     c =  div(rem(operator, 1000),100)
     b = div(rem(operator, 10000),1000)
-    a = div(operator, 100000)
+    a = div(operator, 10000)
     index = indexes[:index]
 
     first = value(c, indexes, index + 1, program)
@@ -71,7 +71,7 @@ defmodule Day9 do
   end
 
   def intcode(operator, indexes, program, pids) when rem(operator,100) == 3 do
-    c =  div(rem(operator, 1000),100)
+    c = div(rem(operator, 1000),100)
     dest = address(c, indexes, indexes[:index]+1, program)
     receive do
       {:output, input} ->
