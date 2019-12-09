@@ -18,9 +18,9 @@ defmodule IntcodeTest do
     end
   end
 
-  def receiver([], received) do
+  def receiver([], _) do
     receive do
-      data -> assert false
+      _ -> assert false
     after 10000 -> assert true
     end
   end
@@ -34,7 +34,7 @@ defmodule IntcodeTest do
     end
   end
 
-  def check_part1(expected, code, received \\ []) do
+  def check_part1(expected, code) do
     {:ok, pid} = Task.start_link (fn -> receiver(expected, []) end)
     Day9.intcode(code, pid, pid)
     :timer.sleep(1000)
