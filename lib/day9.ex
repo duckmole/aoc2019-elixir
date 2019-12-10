@@ -34,12 +34,15 @@ defmodule Day9 do
     value
   end
 
-  def decompose(operator, indexes, program) do
+  def decompose_first(operator, indexes=%{ :index => index }, program) do
+    c =  div(rem(operator, 1000),100)
+    value(c, indexes, index + 1, program)
+  end
+  def decompose(operator, indexes=%{ :index => index }, program) do
     opcode = rem(operator, 100)
     c =  div(rem(operator, 1000),100)
     b = div(rem(operator, 10000),1000)
     a = div(operator, 10000)
-    index = indexes[:index]
 
     first = value(c, indexes, index + 1, program)
     second = value(b, indexes, index + 2, program)
@@ -70,20 +73,20 @@ defmodule Day9 do
     Enum.join(program, ",")
   end
 
-  def intcode(operator, indexes, program, pids) when rem(operator,100) == 3 do
+  def intcode(operator, indexes=%{ :index => index }, program, pids) when rem(operator,100) == 3 do
     c = div(rem(operator, 1000),100)
-    dest = address(c, indexes, indexes[:index]+1, program)
+    dest = address(c, indexes, index+1, program)
     receive do
       {:output, input} ->
         new_program = update_program(input, dest, program)
-        new_indexes = %{indexes | index: indexes[:index] + 2}
+        new_indexes = %{indexes | index: index + 2}
         back(new_indexes, new_program, pids)
     end
   end
-  def intcode(operator, indexes, program, pids) when rem(operator,100) == 4 do
-    [_, first, _, _] = decompose(operator, indexes, program)
+  def intcode(operator, indexes=%{ :index => index }, program, pids) when rem(operator,100) == 4 do
+    first = decompose_first(operator, indexes, program)
     send(pids[:child], {:output, first})
-    new_indexes = %{indexes | index: indexes[:index] + 2}
+    new_indexes = %{indexes | index: index + 2}
     back(new_indexes, program, pids)
   end
   def intcode(operator, indexes, program, pids) when rem(operator,100) == 5 or rem(operator,100) == 6 do
@@ -91,16 +94,16 @@ defmodule Day9 do
     new_indexes = %{indexes | index: jump(opcode, first, second, indexes[:index] + 3)}
     back(new_indexes, program, pids)
   end
-  def intcode(operator, indexes, program, pids) when rem(operator,100) == 9 do
-    [_, first, _, _] = decompose(operator, indexes, program)
-    new_indexes = %{relative_base: indexes[:relative_base] + first, index: indexes[:index] + 2}
+  def intcode(operator, indexes=%{ :relative_base => relative_base, :index => index }, program, pids) when rem(operator,100) == 9 do
+    first = decompose_first(operator, indexes, program)
+    new_indexes = %{relative_base: relative_base + first, index: index + 2}
     back(new_indexes, program, pids)
   end
-  def intcode(operator, indexes, program, pids) do
+  def intcode(operator, indexes=%{ :index => index }, program, pids) do
    [opcode, first, second, dest] = decompose(operator, indexes, program)
     value = operation(opcode, first, second)
     new_program = update_program(value, dest, program)
-    new_indexes = %{indexes | index: indexes[:index] + 4}
+    new_indexes = %{indexes | index: index + 4}
     back(new_indexes, new_program, pids)
   end
 
@@ -109,9 +112,11 @@ defmodule Day9 do
   end
 
   def display(prev \\ []) do
+    start_time = :os.system_time(:millisecond)
+    IO.puts("display")
     receive do
       {:output, value} ->
-        IO.puts("received #{value}")
+        IO.puts("received #{value} in #{:os.system_time(:millisecond)- start_time}ms")
         display([value | prev])
       {:value, value} ->
         IO.puts("Intcode ended : #{value}")
