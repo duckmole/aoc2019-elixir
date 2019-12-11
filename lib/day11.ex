@@ -1,40 +1,43 @@
 defmodule Day11 do
 
-  def run(puzzle) do
-    robot = spawn(fn ->
-       loop({{0,0}, :up}, %{{0,0} => 0}, :direction, nil)
-    end)
+  def run(puzzle, start_color) do
+    robot = spawn(fn -> loop({{0,0}, :up}, %{}, :color, nil) end)
     program = spawn(fn -> intcode(puzzle, robot, nil) end)
+    send(robot, {:state, {:start, program}})
     send(program, {:input, 0})
   end
 
-  def direction({{x,y}, :up}, 0), do: {{x-1, y}, :left}
-  def direction({{x,y}, :up}, 1), do: {{x+1, y}, :right}
-  def direction({{x,y}, :left}, 0), do: {{x, y+1}, :down}
-  def direction({{x,y}, :left}, 1), do: {{x, y-1}, :up}
-  def direction({{x,y}, :down}, 0), do: {{x+1, y}, :right}
-  def direction({{x,y}, :down}, 1), do: {{x-1, y}, :left}
-  def direction({{x,y}, :right}, 0), do: {{x, y-1}, :up}
-  def direction({{x,y}, :right}, 1), do: {{x, y+1}, :down}
+  def direction({{x, y}, :up}, 0), do: {{x - 1, y}, :left}
+  def direction({{x, y}, :up}, 1), do: {{x + 1, y}, :right}
+  def direction({{x, y}, :left}, 0), do: {{x, y + 1}, :down}
+  def direction({{x, y}, :left}, 1), do: {{x, y - 1}, :up}
+  def direction({{x, y}, :down}, 0), do: {{x + 1, y}, :right}
+  def direction({{x, y}, :down}, 1), do: {{x - 1, y}, :left}
+  def direction({{x, y}, :right}, 0), do: {{x, y - 1}, :up}
+  def direction({{x, y}, :right}, 1), do: {{x, y + 1}, :down}
 
   def loop(robot={position={x,y}, _}, map, wait_for, program) do
     receive do
       {:input, input} ->
         case wait_for do
           :direction ->
-            IO.puts("direction #{input}")
-            loop(direction(robot, input), map, :color, program)
+            new_direction = {position, _ }= direction(robot, input)
+            send(program, {:input, map[position] || 0 })
+            loop(new_direction, map, :color, program)
           :color ->
-            IO.puts "#{length(Map.keys(map))} #{ map[position] || 0} -#{x},#{y}"
-            send(program, {:input, map[position] || 0})
             loop(robot, Map.put(map, position, input), :direction, program)
         end
-      {:state, :stop} -> IO.puts "FIN #{length(Map.keys(map))}"
+      {:state, :stop} -> image(map)
       {:state, {:start, pid}} -> loop(robot, map, wait_for, pid)
-      unexpected ->
-        IO.puts unexpected
+      unexpected -> IO.puts unexpected
+    after 10000 -> image(map)
     end
   end
+
+  def image(map) do
+    IO.puts(length(Map.keys(map)))
+  end
+
 
   def intcode(code, nil, thrusters_pid) do
     receive do
@@ -43,7 +46,6 @@ defmodule Day11 do
   end
   def intcode(code, child_pid, thrusters_pid) do
     decode = Enum.map(String.split(code, ","), fn(l) -> integer(l) end)
-    send(child_pid, {:state, {:start, self()}})
     intcode(List.first(decode), %{index: 0, relative_base: 0}, decode, %{child: child_pid, thrusters: thrusters_pid})
   end
 
@@ -111,34 +113,34 @@ defmodule Day11 do
       {:input, input} ->
         new_program = update_program(input, dest, program)
         new_indexes = %{indexes | index: index + 2}
-        next(new_indexes, new_program, pids)
+        back(new_indexes, new_program, pids)
     end
   end
   def intcode(operator, indexes=%{ :index => index }, program, pids) when rem(operator,100) == 4 do
     first = decompose_first(operator, indexes, program)
     send(pids[:child], {:input, first})
     new_indexes = %{indexes | index: index + 2}
-    next(new_indexes, program, pids)
+    back(new_indexes, program, pids)
   end
   def intcode(operator, indexes, program, pids) when rem(operator,100) == 5 or rem(operator,100) == 6 do
     [opcode, first, second, _] = decompose(operator, indexes, program)
     new_indexes = %{indexes | index: jump(opcode, first, second, indexes[:index] + 3)}
-    next(new_indexes, program, pids)
+    back(new_indexes, program, pids)
   end
   def intcode(operator, indexes=%{ :relative_base => relative_base, :index => index }, program, pids) when rem(operator,100) == 9 do
     first = decompose_first(operator, indexes, program)
     new_indexes = %{relative_base: relative_base + first, index: index + 2}
-    next(new_indexes, program, pids)
+    back(new_indexes, program, pids)
   end
   def intcode(operator, indexes=%{ :index => index }, program, pids) do
    [opcode, first, second, dest] = decompose(operator, indexes, program)
     value = operation(opcode, first, second)
     new_program = update_program(value, dest, program)
     new_indexes = %{indexes | index: index + 4}
-    next(new_indexes, new_program, pids)
+    back(new_indexes, new_program, pids)
   end
 
-  def next(indexes, program, pids) do
+  def back(indexes, program, pids) do
     intcode(Enum.at(program, indexes[:index]), indexes, program, pids)
   end
 
@@ -158,15 +160,5 @@ defmodule Day11 do
 
   def permutations([]), do: [[]]
   def permutations(list), do: for elem <- list, rest <- permutations(list--[elem]), do: [elem|rest]
-
-
-
-
-
-
-
-
-
-
 
 end
