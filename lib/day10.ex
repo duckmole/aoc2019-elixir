@@ -95,7 +95,7 @@ defmodule Day10 do
           y = y_origin - step_y * n
           case {round(x) == x, round(y) == y} do
             {true, true} ->
-              Enum.member?(asteroid_map, {round(x), round(y)}
+              Enum.member?(asteroid_map, {round(x), round(y)})
             _ -> false
           end
         end) == []
