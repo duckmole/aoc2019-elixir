@@ -4,7 +4,7 @@ defmodule Day11 do
     robot = spawn(fn -> loop({{0,0}, :up}, %{}, :color, nil) end)
     program = spawn(fn -> intcode(puzzle, robot, nil) end)
     send(robot, {:state, {:start, program}})
-    send(program, {:input, 0})
+    send(program, {:input, start_color})
   end
 
   def direction({{x, y}, :up}, 0), do: {{x - 1, y}, :left}
@@ -35,7 +35,24 @@ defmodule Day11 do
   end
 
   def image(map) do
+    max_x = Enum.max(Enum.map(Map.keys(map), fn({x,_}) -> x end))
+    min_x = Enum.min(Enum.map(Map.keys(map), fn({x,_}) -> x end))
+    max_y = Enum.max(Enum.map(Map.keys(map), fn({_,y}) -> y end))
+    min_y = Enum.min(Enum.map(Map.keys(map), fn({_,y}) -> y end))
     IO.puts(length(Map.keys(map)))
+    IO.puts("#{min_x} - #{max_x} | #{min_y} #{max_y}")
+    image = Enum.join(Enum.map(min_y..max_y, fn(y) ->
+          line = Enum.join(Enum.map((min_x..max_x), fn(x) ->
+                case map[{x,y}] do
+                  1 -> "#"
+                  0 -> " "
+                  _ -> " "
+                end
+              end))
+          Enum.join([line,"\n"])
+        end)
+    )
+    IO.puts image
   end
 
 

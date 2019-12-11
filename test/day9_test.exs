@@ -1,4 +1,4 @@
-defmodule IntcodeTest do
+defmodule Day9Test do
   use ExUnit.Case, async: true
   doctest Day9
 
