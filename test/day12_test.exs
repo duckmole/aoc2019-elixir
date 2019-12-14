@@ -1,4 +1,4 @@
-defmodule Day11Test do
+defmodule Day12Test do
   use ExUnit.Case, async: true
   doctest Day12
 
